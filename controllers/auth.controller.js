@@ -1,12 +1,12 @@
 const asyncHandler = require("express-async-handler");
-const userModel = require("../../models/user.model");
+const userModel = require("../models/user.model");
 const jwt = require("jsonwebtoken");
 const ms = require("ms");
 
 class AuthController {
   login = asyncHandler(async (req, res) => {
     const { email, password } = req.body;
-    const response = await userModel.findOne({ email });
+    const response = await userModel.findOne({ email }).populate("role cart");
 
     if (response && (await response.isCorrectPassword(password))) {
       const {
@@ -51,11 +51,15 @@ class AuthController {
 
   account = asyncHandler(async (req, res) => {
     const user = req.user;
+    const response = await userModel
+      .findById(user._id)
+      .populate("role cart")
+      .select("-refreshToken -password");
     return res.status(200).json({
       success: !!user,
       message: "Thông tin tài khoản",
       data: {
-        user,
+        user: response,
       },
     });
   });
@@ -108,13 +112,29 @@ class AuthController {
         },
       });
     } else {
-      throw new Error("Refresh token thất bại");
+      return res.status(401).json({
+        success: false,
+        message: "Refresh token thất bại",
+      });
     }
   });
 
-  logout(req, res) {}
-  forgotPassword(req, res) {}
-  resetPassword(req, res) {}
+  logout = asyncHandler(async (req, res) => {
+    const user = req.user;
+    await userModel.findByIdAndUpdate(
+      { _id: user._id },
+      {
+        refreshToken: "",
+      }
+    );
+    res.clearCookie("refresh_token");
+    res.status(200).json({
+      success: true,
+      message: "Đăng xuất thành công",
+    });
+  });
+  forgotPassword = asyncHandler(async (req, res) => {});
+  resetPassword = asyncHandler(async (req, res) => {});
 
   createAccessToken(payload) {
     const access_token = jwt.sign(

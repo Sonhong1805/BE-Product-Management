@@ -14,13 +14,46 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
-    avatar: String,
-    phone: String,
-    gender: String,
-    address: String,
-    status: {
+    avatar: {
       type: String,
-      default: "active",
+      default: "",
+    },
+    phone: {
+      type: String,
+      default: "",
+    },
+    gender: {
+      type: String,
+      default: "",
+    },
+    address: {
+      type: String,
+      default: "",
+    },
+    status: {
+      type: Boolean,
+      default: true,
+    },
+    role: {
+      type: Schema.Types.ObjectId,
+      ref: "role",
+    },
+    cart: {
+      type: Schema.Types.ObjectId,
+      ref: "cart",
+    },
+    wishlist: {
+      type: [
+        {
+          slug: String,
+          title: String,
+          thumbnail: String,
+          price: Number,
+          discount: Number,
+          discountedPrice: Number,
+        },
+      ],
+      default: [],
     },
     refreshToken: String,
     deleted: {

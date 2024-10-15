@@ -4,10 +4,11 @@ const cors = require("cors");
 const logger = require("morgan");
 
 const corsOptions = {
-  origin: "http://localhost:3000",
+  origin: process.env.CLIENT_URL,
   credentials: true, //access-control-allow-credentials:true
   optionSuccessStatus: 200,
 };
+
 module.exports = (app) => {
   app.use(logger("dev"));
   app.use(express.json());

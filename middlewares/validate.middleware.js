@@ -2,6 +2,7 @@ const userModel = require("../models/user.model");
 
 module.exports.inputsRegister = async (req, res, next) => {
   const { fullname, email, password } = req.body;
+
   if (!fullname) {
     return res.status(400).json({
       success: false,
@@ -16,7 +17,7 @@ module.exports.inputsRegister = async (req, res, next) => {
   }
   const isExistEmail = await userModel.findOne({ email });
   if (isExistEmail) {
-    throw new Error("Email đã tồn tại");
+    return next(new Error("Email đã tồn tại"));
   }
   if (!password) {
     return res.status(400).json({
@@ -29,7 +30,6 @@ module.exports.inputsRegister = async (req, res, next) => {
 
 module.exports.inputsLogin = (req, res, next) => {
   const { email, password } = req.body;
-  console.log(email, password);
 
   if (!email) {
     return res.status(400).json({
