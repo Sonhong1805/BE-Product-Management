@@ -1,5 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const categoryModel = require("../models/category.model");
+const { getParentCategory } = require("../helpers/getParentCategory");
+const { getChildCategory } = require("../helpers/getSubCategory");
 
 class CategoriesController {
   index = asyncHandler(async (req, res) => {
@@ -48,6 +50,41 @@ class CategoriesController {
     });
   });
 
+  getSubCategories = asyncHandler(async (req, res) => {
+    const { categorySlug } = req.body;
+    if (categorySlug) {
+      const subCategories = await getChildCategory(categorySlug);
+      const listOfSubCategories = await Promise.all(subCategories);
+      const flattenedSubCategories = listOfSubCategories.flat();
+
+      const updatedSubCategories = flattenedSubCategories.map((category) => {
+        if (category.parent_slug === categorySlug) {
+          category.parent_slug = "";
+        }
+        return category._doc;
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Lấy toàn bộ danh mục con liên quan",
+        data: updatedSubCategories,
+      });
+    } else {
+      const categories = await categoryModel.find({});
+      res.status(200).json({
+        success: true,
+        message: "Lấy toàn bộ danh mục liên quan",
+        data: categories,
+      });
+    }
+  });
+
+  getParentCategories = asyncHandler(async (req, res) => {
+    const { slug } = req.body;
+    const parents = await getParentCategory(slug);
+    res.json(parents);
+  });
+
   detail = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const data = await categoryModel.findOne({ _id: id });
@@ -88,7 +125,6 @@ class CategoriesController {
       });
     }
   });
-
   async deleteCategoryWithChildren(categoryId) {
     await categoryModel.findByIdAndUpdate(categoryId, { deleted: true });
 

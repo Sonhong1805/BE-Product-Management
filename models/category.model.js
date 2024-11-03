@@ -11,6 +11,12 @@ const categorySchema = new Schema(
       type: String,
       default: "",
     },
+    productIds: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "product",
+      },
+    ],
     status: {
       type: Boolean,
       default: true,

@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const userModel = require("../models/user.model");
+const bcrypt = require("bcryptjs");
 
 class accountsController {
   index = asyncHandler(async (req, res) => {
@@ -108,7 +109,12 @@ class accountsController {
     const { id } = req.params;
 
     const { fullname, email, gender, phone, address, role } = req.body;
-    const avatar = req?.file?.path || "";
+    let avatar = "";
+    if (req.file) {
+      avatar = req.file.path;
+    } else {
+      avatar = req.body.avatar || "";
+    }
     const response = await userModel.findByIdAndUpdate(
       { _id: id },
       {
@@ -127,7 +133,6 @@ class accountsController {
       res.status(200).json({
         success: !!response,
         message: "Cập nhật tài khoản thành công",
-        data: response,
       });
     }
   });
@@ -168,6 +173,36 @@ class accountsController {
         success: !!response,
         message: "Áp dụng thành công",
         data: response,
+      });
+    }
+  });
+
+  updatePassword = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+
+    const { password } = await userModel.findById(id).select("password");
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    const isCorrectPassword = await bcrypt.compare(currentPassword, password);
+    if (!isCorrectPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Mật khẩu hiện tại không đúng",
+      });
+    }
+    const salt = bcrypt.genSaltSync(10);
+    const bcryptNewPassword = await bcrypt.hash(newPassword, salt);
+
+    const response = await userModel.updateOne(
+      { _id: id },
+      {
+        password: bcryptNewPassword,
+      }
+    );
+
+    if (response) {
+      return res.status(200).json({
+        success: true,
+        message: "Cập nhật mật khẩu thành công",
       });
     }
   });

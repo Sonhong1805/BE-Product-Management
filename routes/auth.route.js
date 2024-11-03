@@ -9,5 +9,8 @@ router.post("/logout", authenticateJWT, authController.logout);
 router.post("/register", validate.inputsRegister, authController.register);
 router.get("/account", authenticateJWT, authController.account);
 router.get("/refresh", authController.refresh);
+router.post("/forgot-password", authController.forgotPassword);
+router.post("/otp-password", authController.otpPassword);
+router.post("/reset-password", authController.resetPassword);
 
 module.exports = router;

@@ -1,6 +1,6 @@
 const categoryModel = require("../models/category.model");
 
-module.exports.getSubCategory = async (parentSlug) => {
+module.exports.getChildCategory = async (parentSlug) => {
   const getCategory = async (slug) => {
     const subs = await categoryModel.find({
       parent_slug: slug,

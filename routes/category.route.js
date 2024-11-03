@@ -8,5 +8,7 @@ router.post("/", categoriesController.create);
 router.patch("/:id", categoriesController.update);
 router.delete("/:id", categoriesController.delete);
 router.post("/feature", categoriesController.changeFeature);
+router.post("/get-sub-categories", categoriesController.getSubCategories);
+router.post("/get-parent-categories", categoriesController.getParentCategories);
 
 module.exports = router;

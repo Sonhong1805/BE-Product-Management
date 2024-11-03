@@ -1,8 +1,10 @@
 const asyncHandler = require("express-async-handler");
 const productModel = require("../models/product.model");
 const convertDiscountedPrice = require("../helpers/discountedPrice");
-const { getSubCategory } = require("../helpers/getSubCategory");
+const { getChildCategory } = require("../helpers/getSubCategory");
 const categoryModel = require("../models/category.model");
+const { getParentCategory } = require("../helpers/getParentCategory");
+const { default: mongoose } = require("mongoose");
 
 class productsController {
   index = asyncHandler(async (req, res) => {
@@ -15,7 +17,7 @@ class productsController {
     const categorySlug = queryObj.categorySlug;
     if (categorySlug) {
       const subCategoryPromises = categorySlug.map(async (slug) => {
-        const subCategories = await getSubCategory(slug);
+        const subCategories = await getChildCategory(slug);
         return subCategories;
       });
       const listOfSubCategories = await Promise.all(subCategoryPromises);
@@ -45,6 +47,21 @@ class productsController {
       ];
 
       delete queryObj.title;
+    }
+
+    if (queryObj?.label?.trim()) {
+      queryObj["label.value"] = {
+        $regex: `^${queryObj.label}$`,
+        $options: "i",
+      };
+      delete queryObj.label;
+    }
+
+    if (queryObj?.colors?.length) {
+      queryObj.colors = { $elemMatch: { value: queryObj.colors } };
+    }
+    if (queryObj?.tags?.length) {
+      queryObj.tags = { $elemMatch: { value: queryObj.tags } };
     }
 
     let queryString = JSON.stringify(queryObj);
@@ -91,7 +108,7 @@ class productsController {
     res.status(200).json({
       success: true,
       message: "Danh sách sản phẩm",
-      priceMax: priceMax.discountedPrice,
+      priceMax: priceMax?.discountedPrice,
       pagination: {
         page,
         limit,
@@ -115,30 +132,63 @@ class productsController {
   });
 
   create = asyncHandler(async (req, res) => {
-    const { title, category, price, discount, descriptions, quantity } =
-      req.body;
+    const {
+      title,
+      slug,
+      description,
+      category,
+      label,
+      price,
+      discount,
+      descriptions,
+      quantity,
+    } = req.body;
 
-    const highlights = JSON.parse(req.body.highlights);
+    const tags = JSON.parse(req.body.tags);
+    const colors = JSON.parse(req.body.colors);
 
     const thumbnail = req?.files?.thumbnail?.[0]?.path || "";
     const images = req?.files?.images?.map((file) => file.path) || [];
     const discountedPrice = convertDiscountedPrice(price, discount);
     const validCategory = category ? category : null;
+    const validLabel = label ? JSON.parse(label) : null;
 
     const response = await productModel.create({
       title,
+      slug,
+      description,
       thumbnail,
       images,
       category: validCategory,
+      label: validLabel,
       price,
       discount,
       discountedPrice,
       descriptions,
       quantity,
-      highlights,
+      tags,
+      colors,
     });
 
     if (response) {
+      const productId = response._id;
+      if (validCategory) {
+        const categoryData = await categoryModel.findById(validCategory);
+        if (categoryData) {
+          const { slug } = categoryData;
+          const parents = await getParentCategory(slug);
+          const parentIds = parents.map((parent) => parent._id);
+
+          await categoryModel.updateMany(
+            { _id: { $in: parentIds } },
+            { $push: { productIds: productId } }
+          );
+        }
+      }
+      // await categoryModel.updateMany(
+      //   { _id: { $in: parentIds } },
+      //   { $inc: { quantity: 1 } }
+      // );
       return res.status(200).json({
         success: true,
         message: "Tạo mới sản phẩm thành công",
@@ -152,6 +202,9 @@ class productsController {
 
     const {
       title,
+      slug,
+      description,
+      label,
       thumbnail: thumbnailBody,
       images: imagesBody,
       category,
@@ -160,7 +213,9 @@ class productsController {
       descriptions,
       quantity,
     } = req.body;
-    const highlights = JSON.parse(req.body.highlights);
+
+    const tags = JSON.parse(req.body.tags);
+    const colors = JSON.parse(req.body.colors);
 
     const thumbnail = req?.files?.thumbnail?.[0]?.path || thumbnailBody || "";
 
@@ -169,19 +224,25 @@ class productsController {
     const images = [...imageArr, ...imagesPath];
     const discountedPrice = convertDiscountedPrice(price, discount);
     const validCategory = category ? category : null;
+    const validLabel = label ? JSON.parse(label) : null;
+
     const response = await productModel.findByIdAndUpdate(
       { _id: id },
       {
         title,
+        slug,
+        description,
         thumbnail,
         images,
         category: validCategory,
+        label: validLabel,
         price,
         discount,
         discountedPrice,
         descriptions,
         quantity,
-        highlights,
+        tags,
+        colors,
         updatedAt: new Date(),
       },
       { new: true }
@@ -197,16 +258,24 @@ class productsController {
   });
 
   delete = asyncHandler(async (req, res) => {
-    const { id } = req.params;
+    const { pid, cid } = req.params;
 
     const response = await productModel.findByIdAndUpdate(
-      { _id: id },
+      { _id: pid },
       {
         deleted: true,
       }
     );
 
     if (response) {
+      const productId = pid;
+      const { slug } = await categoryModel.findById(cid);
+      const parents = await getParentCategory(slug);
+      const parentIds = parents.map((parent) => parent._id);
+      await categoryModel.updateMany(
+        { _id: { $in: parentIds } },
+        { $pull: { productIds: productId } }
+      );
       res.status(200).json({
         success: !!response,
         message: "Xoá sản phẩm thành công",
@@ -227,11 +296,18 @@ class productsController {
       { multi: true }
     );
 
+    if (field === "deleted") {
+      const objectIds = ids.map((id) => new mongoose.Types.ObjectId(id));
+      await categoryModel.updateMany(
+        { productIds: { $in: objectIds } },
+        { $pull: { productIds: { $in: objectIds } } }
+      );
+    }
+
     if (response) {
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Áp dụng thành công",
-        data: response,
       });
     }
   });

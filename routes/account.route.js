@@ -12,8 +12,14 @@ router.post(
   validate.inputsRegister,
   accountsController.create
 );
-router.patch("/:id", upload.single("avatar"), accountsController.update);
+router.patch(
+  "/:id",
+
+  upload.single("avatar"),
+  accountsController.update
+);
 router.delete("/:id", accountsController.delete);
 router.post("/feature", accountsController.changeFeature);
+router.patch("/update-password/:id", accountsController.updatePassword);
 
 module.exports = router;

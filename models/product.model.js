@@ -1,12 +1,24 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
-const slug = require("mongoose-slug-updater");
-mongoose.plugin(slug);
 
 const productSchema = new Schema(
   {
     title: String,
-    slug: { type: String, slug: "title", unique: true },
+    slug: {
+      type: String,
+      default: "",
+    },
+    description: {
+      type: String,
+      default: "",
+    },
+    label: {
+      type: {
+        label: String,
+        value: String,
+      },
+      default: null,
+    },
     thumbnail: {
       type: String,
       default: "",
@@ -32,10 +44,17 @@ const productSchema = new Schema(
       default: 0,
     },
     descriptions: String,
-    highlights: [
+    tags: [
       {
         value: String,
         label: String,
+      },
+    ],
+    colors: [
+      {
+        value: String,
+        label: String,
+        color: String,
       },
     ],
     quantity: {

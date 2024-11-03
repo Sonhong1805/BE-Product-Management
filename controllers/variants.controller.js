@@ -4,9 +4,9 @@ const convertDiscountedPrice = require("../helpers/discountedPrice");
 
 class VariantsController {
   index = asyncHandler(async (req, res) => {
-    const { pid } = req.params;
+    const { pSlug } = req.params;
     const response = await productModel
-      .findById(pid)
+      .findOne({ slug: pSlug })
       .select("variants")
       .sort("-updatedAt");
 
@@ -18,12 +18,12 @@ class VariantsController {
   });
 
   create = asyncHandler(async (req, res) => {
-    const { pid } = req.params;
+    const { pSlug } = req.params;
     const { name, price, discount, status } = req.body;
     const thumbnail = req?.file?.path || req.body.thumbnail;
     const discountedPrice = convertDiscountedPrice(price, discount);
-    const response = await productModel.findByIdAndUpdate(
-      pid,
+    const response = await productModel.findOneAndUpdate(
+      { slug: pSlug },
       {
         $push: {
           variants: {
@@ -51,12 +51,12 @@ class VariantsController {
   });
 
   update = asyncHandler(async (req, res) => {
-    const { pid, vid } = req.params;
+    const { pSlug, vid } = req.params;
     const { name, price, discount, status } = req.body;
     const thumbnail = req?.file?.path || req.body.thumbnail;
     const discountedPrice = convertDiscountedPrice(price, discount);
     const response = await productModel.findOneAndUpdate(
-      { _id: pid, "variants._id": vid },
+      { slug: pSlug, "variants._id": vid },
       {
         $set: {
           "variants.$.name": name,
@@ -83,9 +83,9 @@ class VariantsController {
   });
 
   delete = asyncHandler(async (req, res) => {
-    const { pid, vid } = req.params;
-    const response = await productModel.findByIdAndUpdate(
-      pid,
+    const { pSlug, vid } = req.params;
+    const response = await productModel.findOneAndUpdate(
+      { slug: pSlug },
       {
         $pull: { variants: { _id: vid } },
       },

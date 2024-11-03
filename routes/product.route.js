@@ -21,7 +21,7 @@ router.patch(
   ]),
   productsController.update
 );
-router.delete("/:id", productsController.delete);
+router.delete("/:cid/:pid", productsController.delete);
 router.post("/feature", productsController.changeFeature);
 router.post(
   "/upload",

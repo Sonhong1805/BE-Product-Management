@@ -13,6 +13,7 @@ const variantRoute = require("./variant.route");
 const cartRoute = require("./cart.route");
 const wishlistRoute = require("./wishlist.route");
 const ratingRoute = require("./rating.route");
+const orderRoute = require("./order.route");
 
 module.exports = (app) => {
   app.use("/auth", authRoute);
@@ -26,8 +27,9 @@ module.exports = (app) => {
   app.use("/carts", cartRoute);
   app.use("/wishlist", wishlistRoute);
   app.use("/ratings", ratingRoute);
+  app.use("/orders", orderRoute);
   app.use("/", (req, res) => {
-    res.send("Home page");
+    res.send("Product Management for Ecommerce Services");
   });
   app.use(notFound);
   app.use(errorHandler);
