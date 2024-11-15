@@ -121,7 +121,10 @@ class productsController {
 
   detail = asyncHandler(async (req, res) => {
     const { slug } = req.params;
-    const response = await productModel.findOne({ slug }).populate("category");
+    const response = await productModel
+      .findOne({ slug })
+      .populate("category")
+      .populate({ path: "ratings.user", select: "fullname avatar" });
     if (response) {
       res.status(200).json({
         success: !!response,

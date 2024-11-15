@@ -10,7 +10,7 @@ class RatingsController {
 
     const newRatingItem = {
       _id: new mongoose.mongo.ObjectId(),
-      email: user.email,
+      user: new mongoose.mongo.ObjectId(user._id),
       content,
       star,
       createdAt: new Date(),
@@ -33,23 +33,14 @@ class RatingsController {
     res.status(200).json({
       success: true,
       message: "Thêm đánh giá thành công",
-      data: newRatingItem,
-    });
-  });
-
-  delete = asyncHandler(async (req, res) => {
-    const { pid, id } = req.params;
-    await productModel.updateOne(
-      {
-        _id: pid,
+      data: {
+        ...newRatingItem,
+        user: {
+          _id: user._id,
+          fullname: user.fullname,
+          avatar: user.avatar,
+        },
       },
-      {
-        $pull: { ratings: { _id: new mongoose.mongo.ObjectId(id) } },
-      }
-    );
-    res.status(200).json({
-      success: true,
-      message: "Xoá đánh giá thành công",
     });
   });
 }

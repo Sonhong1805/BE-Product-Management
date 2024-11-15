@@ -102,7 +102,7 @@ const productSchema = new Schema(
     ratings: {
       type: [
         {
-          email: String,
+          user: { type: Schema.Types.ObjectId, ref: "user" },
           content: String,
           star: Number,
           createdAt: {

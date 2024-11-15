@@ -64,10 +64,13 @@ class CategoriesController {
         return category._doc;
       });
 
+      const parentCategories = await getParentCategory(categorySlug);
+
       res.status(200).json({
         success: true,
         message: "Lấy toàn bộ danh mục con liên quan",
         data: updatedSubCategories,
+        parentCategories,
       });
     } else {
       const categories = await categoryModel.find({});

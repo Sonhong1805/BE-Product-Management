@@ -32,7 +32,7 @@ class AuthController {
         maxAge: ms(process.env.JWT_REFRESH_EXPIRE),
       });
       return res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Đăng nhập thành công",
         data: {
           accessToken,
@@ -40,7 +40,14 @@ class AuthController {
         },
       });
     } else {
-      throw new Error("Đăng nhập thất bại !!!");
+      return res.status(400).json({
+        success: false,
+        message: "Đăng nhập thất bại !!!",
+        data: {
+          accessToken,
+          user,
+        },
+      });
     }
   });
 

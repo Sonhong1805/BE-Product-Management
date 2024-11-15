@@ -16,8 +16,23 @@ class cartsController {
       price,
       discountedPrice,
       quantity,
+      maxQuantity,
       selected,
     } = req.body;
+
+    const cartItem = {
+      _id: new mongoose.mongo.ObjectId(),
+      productId,
+      title,
+      slug,
+      thumbnail,
+      price,
+      discountedPrice,
+      quantity,
+      maxQuantity,
+      variant,
+      selected,
+    };
 
     if (!cartId || !mongoose.Types.ObjectId.isValid(cartId)) {
       const response = await cartModel.findOneAndUpdate(
@@ -25,20 +40,7 @@ class cartsController {
         {
           $push: {
             products: {
-              $each: [
-                {
-                  _id: new mongoose.mongo.ObjectId(),
-                  productId,
-                  title,
-                  slug,
-                  thumbnail,
-                  price,
-                  discountedPrice,
-                  quantity,
-                  variant,
-                  selected,
-                },
-              ],
+              $each: [cartItem],
               $position: 0,
             },
           },
@@ -100,20 +102,7 @@ class cartsController {
             {
               $push: {
                 products: {
-                  $each: [
-                    {
-                      _id: new mongoose.mongo.ObjectId(),
-                      productId,
-                      title,
-                      slug,
-                      thumbnail,
-                      price,
-                      discountedPrice,
-                      quantity,
-                      variant,
-                      selected,
-                    },
-                  ],
+                  $each: [cartItem],
                   $position: 0,
                 },
               },
@@ -138,17 +127,21 @@ class cartsController {
 
   update = asyncHandler(async (req, res) => {
     const { cid, id } = req.params;
-    const { type } = req.body;
+    const { type, quantity } = req.body;
+    let newQuantity = quantity;
 
     const response = await cartModel.findOne({ _id: cid }).select("products");
     const products = response.products;
-    const currentQuantity = products.find(
+    const currentMaxQuantity = products.find(
       (product) => product._id + "" === id
-    ).quantity;
+    ).maxQuantity;
 
     switch (type) {
       case "plus": {
-        const newQuantity = currentQuantity + 1;
+        newQuantity = quantity + 1;
+        if (newQuantity >= currentMaxQuantity || isNaN(newQuantity)) {
+          newQuantity = currentMaxQuantity;
+        }
         await cartModel.updateOne(
           {
             _id: cid,
@@ -168,8 +161,8 @@ class cartsController {
         });
       }
       case "minus": {
-        let newQuantity = currentQuantity - 1;
-        if (newQuantity <= 1) {
+        newQuantity = quantity - 1;
+        if (newQuantity <= 1 || isNaN(newQuantity)) {
           newQuantity = 1;
         }
         await cartModel.updateOne(
@@ -184,6 +177,28 @@ class cartsController {
         return res.status(200).json({
           success: true,
           message: "Giảm số lượng thành công",
+          data: {
+            _id: id,
+            quantity: newQuantity,
+          },
+        });
+      }
+      case "input": {
+        if (newQuantity <= 1 || isNaN(newQuantity)) {
+          newQuantity = 1;
+        }
+        await cartModel.updateOne(
+          {
+            _id: cid,
+            "products._id": new mongoose.Types.ObjectId(id),
+          },
+          {
+            "products.$.quantity": newQuantity,
+          }
+        );
+        return res.status(200).json({
+          success: true,
+          message: "Thay đổi số lượng thành công",
           data: {
             _id: id,
             quantity: newQuantity,

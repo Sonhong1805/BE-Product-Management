@@ -180,15 +180,18 @@ class accountsController {
   updatePassword = asyncHandler(async (req, res) => {
     const { id } = req.params;
 
-    const { password } = await userModel.findById(id).select("password");
-    const { currentPassword, newPassword, confirmPassword } = req.body;
-    const isCorrectPassword = await bcrypt.compare(currentPassword, password);
-    if (!isCorrectPassword) {
-      return res.status(400).json({
-        success: false,
-        message: "Mật khẩu hiện tại không đúng",
-      });
+    const { currentPassword, newPassword } = req.body;
+    if (req.body.password) {
+      const { password } = await userModel.findById(id).select("password");
+      const isCorrectPassword = await bcrypt.compare(currentPassword, password);
+      if (!isCorrectPassword) {
+        return res.status(400).json({
+          success: false,
+          message: "Mật khẩu hiện tại không đúng",
+        });
+      }
     }
+
     const salt = bcrypt.genSaltSync(10);
     const bcryptNewPassword = await bcrypt.hash(newPassword, salt);
 

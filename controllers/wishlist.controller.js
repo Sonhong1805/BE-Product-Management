@@ -56,7 +56,7 @@ class WishlistController {
     );
     res.status(200).json({
       success: true,
-      message: "Xoá sản phẩm thành công",
+      message: "Bỏ yêu thích thành công",
     });
   });
 }

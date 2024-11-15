@@ -2,6 +2,8 @@ const asyncHandler = require("express-async-handler");
 const mongoose = require("mongoose");
 const orderModel = require("../models/order.model");
 const cartModel = require("../models/cart.model");
+const groupItems = require("../helpers/groupsProduct");
+const productModel = require("../models/product.model");
 
 class OrdersController {
   index = asyncHandler(async (req, res) => {
@@ -118,6 +120,23 @@ class OrdersController {
     const { id } = req.params;
     const { status } = req.body;
     const response = await orderModel.findByIdAndUpdate(id, { status });
+    if (status === "APPROVED") {
+      const { products } = await orderModel.findById(id).select("products");
+      const groupProducts = groupItems(products);
+      groupProducts.forEach(async (product) => {
+        const { sold } = await productModel
+          .findOne({
+            slug: product.slug,
+          })
+          .select("sold");
+        await productModel.updateOne(
+          { slug: product.slug },
+          {
+            $set: { sold: sold + product.quantity },
+          }
+        );
+      });
+    }
     if (response) {
       res.status(200).json({
         success: true,
