@@ -3,10 +3,10 @@ const router = express.Router();
 const categoriesController = require("../controllers/categories.controller");
 
 router.get("/", categoriesController.index);
-router.get("/:id", categoriesController.detail);
+router.get("/:slug", categoriesController.detail);
 router.post("/", categoriesController.create);
-router.patch("/:id", categoriesController.update);
-router.delete("/:id", categoriesController.delete);
+router.patch("/:slug", categoriesController.update);
+router.delete("/:slug", categoriesController.delete);
 router.post("/feature", categoriesController.changeFeature);
 router.post("/get-sub-categories", categoriesController.getSubCategories);
 router.post("/get-parent-categories", categoriesController.getParentCategories);

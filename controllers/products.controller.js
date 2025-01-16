@@ -87,7 +87,7 @@ class productsController {
     }
 
     const page = +req.query.page || 1;
-    const limit = +req.query.limit || 2;
+    const limit = +req.query.limit || 4;
     const skip = (page - 1) * limit;
 
     query = query.skip(skip).limit(limit);
@@ -127,7 +127,7 @@ class productsController {
       .populate({ path: "ratings.user", select: "fullname avatar" });
     if (response) {
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Chi tiết sản phẩm",
         data: response,
       });
@@ -152,7 +152,7 @@ class productsController {
 
     const thumbnail = req?.files?.thumbnail?.[0]?.path || "";
     const images = req?.files?.images?.map((file) => file.path) || [];
-    const discountedPrice = convertDiscountedPrice(price, discount);
+    const discountedPrice = convertDiscountedPrice(price, discount || 0);
     const validCategory = category ? category : null;
     const validLabel = label ? JSON.parse(label) : null;
 
@@ -217,6 +217,8 @@ class productsController {
       quantity,
     } = req.body;
 
+    const currentProduct = await productModel.findById(id).select("category");
+
     const tags = JSON.parse(req.body.tags);
     const colors = JSON.parse(req.body.colors);
 
@@ -252,8 +254,40 @@ class productsController {
     );
 
     if (response) {
+      const categoryProduct = response.category;
+      const isCompare =
+        categoryProduct.toString() === currentProduct.category.toString();
+      if (!isCompare) {
+        // xoá id ở danh mục cũ
+        const currentCategory = await categoryModel
+          .findById(currentProduct.category.toString())
+          .select("productIds parent_slug");
+        const currentParentCategories = await getParentCategory(
+          currentCategory.parent_slug
+        );
+        const currentParentIds = currentParentCategories.map(
+          (category) => category._id
+        );
+        const parentIds = [currentCategory._id, ...currentParentIds];
+        await categoryModel.updateMany(
+          { _id: { $in: parentIds } },
+          { $pull: { productIds: id } }
+        );
+
+        // cập nhật id cho danh mục mới
+        const newCategory = await categoryModel.findById(validCategory);
+        if (newCategory) {
+          const { slug } = newCategory;
+          const parentCategories = await getParentCategory(slug);
+          const parentIds = parentCategories.map((parent) => parent._id);
+          await categoryModel.updateMany(
+            { _id: { $in: parentIds } },
+            { $addToSet: { productIds: id } }
+          );
+        }
+      }
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Cập nhật sản phẩm thành công",
         data: response,
       });
@@ -262,6 +296,7 @@ class productsController {
 
   delete = asyncHandler(async (req, res) => {
     const { pid, cid } = req.params;
+    console.log(pid, cid);
 
     const response = await productModel.findByIdAndUpdate(
       { _id: pid },
@@ -271,16 +306,18 @@ class productsController {
     );
 
     if (response) {
-      const productId = pid;
-      const { slug } = await categoryModel.findById(cid);
-      const parents = await getParentCategory(slug);
-      const parentIds = parents.map((parent) => parent._id);
-      await categoryModel.updateMany(
-        { _id: { $in: parentIds } },
-        { $pull: { productIds: productId } }
-      );
+      if (cid && mongoose.Types.ObjectId.isValid(cid)) {
+        const productId = pid;
+        const { slug } = await categoryModel.findById(cid);
+        const parents = await getParentCategory(slug);
+        const parentIds = parents.map((parent) => parent._id);
+        await categoryModel.updateMany(
+          { _id: { $in: parentIds } },
+          { $pull: { productIds: productId } }
+        );
+      }
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Xoá sản phẩm thành công",
         data: {
           _id: response._id,
@@ -299,11 +336,38 @@ class productsController {
       { multi: true }
     );
 
-    if (field === "deleted") {
-      const objectIds = ids.map((id) => new mongoose.Types.ObjectId(id));
+    const objectIds = ids.map((id) => new mongoose.Types.ObjectId(id));
+    if (field === "deleted" || feature === "status-false") {
       await categoryModel.updateMany(
         { productIds: { $in: objectIds } },
         { $pull: { productIds: { $in: objectIds } } }
+      );
+    } else if (feature === "status-true") {
+      //  Lấy danh mục liên quan của từng sản phẩm
+      const products = await productModel
+        .find({ _id: { $in: ids } })
+        .select("category");
+      const categoryIds = products.map((product) => product.category);
+
+      const categories = await categoryModel
+        .find({ _id: { $in: categoryIds } })
+        .select("slug");
+
+      const categorySlugs = categories.map((category) => category.slug);
+
+      // Lấy danh mục cha của từng danh mục
+      const parentCategories = await Promise.all(
+        categorySlugs.map((slug) => getParentCategory(slug))
+      );
+
+      //  Lấy tất cả _id của danh mục cha
+      const parentIds = Array.from(
+        new Set(parentCategories.flat().map((parent) => parent._id))
+      );
+
+      await categoryModel.updateMany(
+        { _id: { $in: parentIds } },
+        { $addToSet: { productIds: { $each: objectIds } } }
       );
     }
 
@@ -314,17 +378,28 @@ class productsController {
       });
     }
   });
-
-  upload = asyncHandler(async (req, res) => {
-    const { thumbnail, images } = req.files;
-    console.log("thumbnail:" + thumbnail[0]?.path);
-    console.log("images:" + images?.map((file) => file.path));
-
-    res.status(200).json({
-      success: true,
-      message: "Upload thành công",
-    });
-  });
 }
 
 module.exports = new productsController();
+
+// Lấy danh mục cha của từng danh mục con
+// const parentCategories = await Promise.all(
+//   categorySlugs.map((slug) => getParentCategory(slug))
+// );
+
+// Làm phẳng danh sách danh mục cha
+// const flatParentCategories = parentCategories.flat();
+
+// Tạo map để đếm số lần mỗi danh mục cha xuất hiện
+// const parentCounts = flatParentCategories.reduce((acc, parent) => {
+//   acc[parent._id] = (acc[parent._id] || 0) + 1;
+//   return acc;
+// }, {});
+
+// Giảm số lượng của danh mục cha
+// for (const [parentId, count] of Object.entries(parentCounts)) {
+//   await categoryModel.updateOne(
+//     { _id: parentId },
+//     { $inc: { quantity: -count } }
+//   );
+// }

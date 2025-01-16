@@ -62,7 +62,7 @@ class OrdersController {
 
   detailByUserId = asyncHandler(async (req, res) => {
     const { uid } = req.params;
-    const response = await orderModel.find({ userId: uid });
+    const response = await orderModel.find({ userId: uid }).sort("-updatedAt");
     if (response) {
       res.status(200).json({
         success: true,
@@ -74,7 +74,7 @@ class OrdersController {
 
   detail = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const response = await orderModel.find(id);
+    const response = await orderModel.findById(id);
     if (response) {
       res.status(200).json({
         success: true,
@@ -123,19 +123,26 @@ class OrdersController {
     if (status === "APPROVED") {
       const { products } = await orderModel.findById(id).select("products");
       const groupProducts = groupItems(products);
-      groupProducts.forEach(async (product) => {
-        const { sold } = await productModel
-          .findOne({
-            slug: product.slug,
-          })
-          .select("sold");
-        await productModel.updateOne(
-          { slug: product.slug },
-          {
-            $set: { sold: sold + product.quantity },
-          }
-        );
-      });
+
+      Promise.all(
+        groupProducts.map(async (product) => {
+          const { sold, quantity } = await productModel
+            .findOne({
+              slug: product.slug,
+            })
+            .select("sold quantity");
+
+          await productModel.updateOne(
+            { slug: product.slug },
+            {
+              $set: {
+                sold: sold + product.quantity,
+                quantity: quantity - product.quantity,
+              },
+            }
+          );
+        })
+      );
     }
     if (response) {
       res.status(200).json({
@@ -160,6 +167,7 @@ class OrdersController {
     const { ids, feature } = req.body;
     const field = feature.split("-")[0];
     const value = feature.split("-")[1];
+
     const response = await orderModel.updateMany(
       { _id: { $in: ids } },
       { $set: { [field]: value } },
@@ -168,7 +176,7 @@ class OrdersController {
 
     if (response) {
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Áp dụng thành công",
         data: response,
       });

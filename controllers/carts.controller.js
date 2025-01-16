@@ -16,7 +16,7 @@ class cartsController {
       price,
       discountedPrice,
       quantity,
-      maxQuantity,
+      stock,
       selected,
     } = req.body;
 
@@ -29,7 +29,7 @@ class cartsController {
       price,
       discountedPrice,
       quantity,
-      maxQuantity,
+      stock,
       variant,
       selected,
     };
@@ -132,15 +132,15 @@ class cartsController {
 
     const response = await cartModel.findOne({ _id: cid }).select("products");
     const products = response.products;
-    const currentMaxQuantity = products.find(
+    const currentStock = products.find(
       (product) => product._id + "" === id
-    ).maxQuantity;
+    ).stock;
 
     switch (type) {
       case "plus": {
         newQuantity = quantity + 1;
-        if (newQuantity >= currentMaxQuantity || isNaN(newQuantity)) {
-          newQuantity = currentMaxQuantity;
+        if (newQuantity >= currentStock || isNaN(newQuantity)) {
+          newQuantity = currentStock;
         }
         await cartModel.updateOne(
           {

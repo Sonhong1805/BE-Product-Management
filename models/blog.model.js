@@ -7,6 +7,13 @@ const blogSchema = new Schema(
   {
     title: String,
     slug: { type: String, slug: "title", unique: true },
+    topic: {
+      type: {
+        label: String,
+        value: String,
+      },
+      default: null,
+    },
     thumbnail: {
       type: String,
       default: "",

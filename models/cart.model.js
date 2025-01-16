@@ -11,7 +11,7 @@ const cartSchema = new Schema(
         price: Number,
         discountedPrice: Number,
         quantity: Number,
-        maxQuantity: Number,
+        stock: Number,
         productId: String,
         variant: String,
         selected: Boolean,

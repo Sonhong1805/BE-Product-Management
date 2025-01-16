@@ -70,11 +70,11 @@ class accountsController {
   detail = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const response = await userModel
-      .findOne({ _id: id })
+      .findOne({ _id: id, deleted: false })
       .populate({ path: "role", select: "_id title" });
     if (response) {
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Chi tiết tài khoản",
         data: response,
       });
@@ -131,7 +131,7 @@ class accountsController {
 
     if (response) {
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Cập nhật tài khoản thành công",
       });
     }
@@ -149,7 +149,7 @@ class accountsController {
 
     if (response) {
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Xoá tài khoản thành công",
         data: {
           _id: response._id,
@@ -170,7 +170,7 @@ class accountsController {
 
     if (response) {
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Áp dụng thành công",
         data: response,
       });

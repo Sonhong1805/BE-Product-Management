@@ -54,10 +54,12 @@ class AuthController {
   register = asyncHandler(async (req, res) => {
     const { fullname, email, password } = req.body;
     const response = await userModel.create({ fullname, email, password });
-    return res.status(200).json({
-      success: !!response,
-      message: "Đăng ký thành công",
-    });
+    if (response) {
+      return res.status(200).json({
+        success: true,
+        message: "Đăng ký thành công",
+      });
+    }
   });
 
   account = asyncHandler(async (req, res) => {
@@ -67,7 +69,7 @@ class AuthController {
       .populate("role cart")
       .select("-refreshToken -password");
     return res.status(200).json({
-      success: !!user,
+      success: true,
       message: "Thông tin tài khoản",
       data: {
         user: response,
@@ -115,7 +117,7 @@ class AuthController {
         maxAge: ms(process.env.JWT_REFRESH_EXPIRE),
       });
       return res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Refresh token thành công",
         data: {
           accessToken,
@@ -171,8 +173,8 @@ class AuthController {
 
   otpPassword = asyncHandler(async (req, res) => {
     const { email, otp } = req.body;
-    const isExitsOTP = await forgotPasswordModel.findOne({ email, otp });
-    if (isExitsOTP) {
+    const isExistOTP = await forgotPasswordModel.findOne({ email, otp });
+    if (isExistOTP) {
       return res.status(200).json({
         success: true,
         message: "Xác thực OTP thành công",

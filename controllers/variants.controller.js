@@ -8,12 +8,17 @@ class VariantsController {
     const response = await productModel
       .findOne({ slug: pSlug })
       .select("variants")
-      .sort("-updatedAt");
+      .lean();
+    if (response && response.variants) {
+      response.variants.sort(
+        (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
+      );
+    }
 
     res.status(200).json({
       success: true,
       message: "Danh sách phân loại sản phẩm",
-      data: response.variants,
+      data: response?.variants || [],
     });
   });
 

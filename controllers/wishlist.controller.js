@@ -57,6 +57,9 @@ class WishlistController {
     res.status(200).json({
       success: true,
       message: "Bỏ yêu thích thành công",
+      data: {
+        _id: id,
+      },
     });
   });
 }

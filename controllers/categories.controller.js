@@ -89,8 +89,8 @@ class CategoriesController {
   });
 
   detail = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const data = await categoryModel.findOne({ _id: id });
+    const { slug } = req.params;
+    const data = await categoryModel.findOne({ slug, deleted: false });
     if (data) {
       res.status(200).json({
         success: true,
@@ -103,69 +103,110 @@ class CategoriesController {
   create = asyncHandler(async (req, res) => {
     const { title, parent_slug } = req.body;
     const data = await categoryModel.create({ title, parent_slug });
+    const categories = await categoryModel.find({}).sort("-updatedAt");
     if (data) {
       res.status(200).json({
         success: true,
         message: "Tạo mới danh mục thành công",
-        data,
+        data: categories,
       });
     }
   });
 
   update = asyncHandler(async (req, res) => {
-    const { id } = req.params;
+    const { slug } = req.params;
     const { title, parent_slug } = req.body;
-    const response = await categoryModel.findByIdAndUpdate(
-      { _id: id },
+
+    const currentCategory = await categoryModel
+      .findOne({ slug })
+      .select("productIds parent_slug");
+
+    const currentParentCategories = await getParentCategory(
+      currentCategory.parent_slug
+    );
+
+    const currentParentIds = currentParentCategories.map(
+      (category) => category._id
+    );
+    const newParentCategories = await getParentCategory(parent_slug);
+    const newParentIds = newParentCategories.map((category) => category._id);
+
+    // cập nhật các id cho danh mục cha mới
+    await categoryModel.updateMany(
+      { _id: { $in: newParentIds } },
+      { $addToSet: { productIds: { $each: currentCategory.productIds } } }
+    );
+
+    // xoá các id ở danh mục cha cũ
+    await categoryModel.updateMany(
+      { _id: { $in: currentParentIds } },
+      { $pull: { productIds: { $in: currentCategory.productIds } } }
+    );
+
+    const response = await categoryModel.findOneAndUpdate(
+      { slug },
       { title, parent_slug, updatedAt: new Date() },
       { new: true }
     );
+
+    const categories = await categoryModel.find({}).sort("-updatedAt");
+
     if (response) {
       res.status(200).json({
         success: true,
         message: "Cập nhật danh mục thành công",
-        data: response,
+        data: categories,
       });
     }
   });
-  async deleteCategoryWithChildren(categoryId) {
-    await categoryModel.findByIdAndUpdate(categoryId, { deleted: true });
+
+  async deleteCategoryWithChildren(slug) {
+    await categoryModel.findOneAndDelete({ slug });
 
     const childCategories = await categoryModel.find({
-      parent_slug: categoryId,
+      parent_slug: slug,
     });
 
     for (let child of childCategories) {
-      await this.deleteCategoryWithChildren(child._id);
+      await this.deleteCategoryWithChildren(child.slug);
     }
   }
 
   delete = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-
-    await this.deleteCategoryWithChildren(id);
+    const { slug } = req.params;
+    await this.deleteCategoryWithChildren(slug);
+    const categories = await categoryModel.find({}).sort("-updatedAt");
 
     res.status(200).json({
       success: true,
       message: "Xoá danh mục và các danh mục con thành công",
+      data: categories,
     });
   });
 
   changeFeature = asyncHandler(async (req, res) => {
-    const { ids, feature } = req.body;
+    const { slugs, feature } = req.body;
     const field = feature.split("-")[0];
     const value = feature.split("-")[1];
     const response = await categoryModel.updateMany(
-      { _id: { $in: ids } },
+      { slug: { $in: slugs } },
       { $set: { [field]: value } },
       { multi: true }
     );
 
+    if (field === "deleted") {
+      await Promise.all(
+        slugs.map(async (slug) => await this.deleteCategoryWithChildren(slug))
+      );
+    }
+
+    const categories = await categoryModel.find({}).sort("-updatedAt");
+
     if (response) {
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Áp dụng thành công",
-        data: response,
+        data: categories,
       });
     }
   });

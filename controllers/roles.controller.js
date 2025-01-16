@@ -45,10 +45,10 @@ class rolesController {
 
   detail = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const response = await roleModel.findOne({ _id: id });
+    const response = await roleModel.findOne({ _id: id, deleted: false });
     if (response) {
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Chi tiết vai trò",
         data: response,
       });
@@ -88,7 +88,7 @@ class rolesController {
 
     if (response) {
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Cập nhật vai trò thành công",
         data: response,
       });
@@ -109,7 +109,7 @@ class rolesController {
       console.log(response);
 
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Xoá vai trò thành công",
         data: {
           _id: response._id,
@@ -130,7 +130,7 @@ class rolesController {
 
     if (response) {
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Áp dụng thành công",
         data: response,
       });

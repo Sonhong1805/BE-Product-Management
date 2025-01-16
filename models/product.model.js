@@ -4,10 +4,7 @@ const { Schema } = mongoose;
 const productSchema = new Schema(
   {
     title: String,
-    slug: {
-      type: String,
-      default: "",
-    },
+    slug: { type: String, slug: "title", unique: true },
     description: {
       type: String,
       default: "",

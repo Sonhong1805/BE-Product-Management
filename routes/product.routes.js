@@ -23,13 +23,5 @@ router.patch(
 );
 router.delete("/:cid/:pid", productsController.delete);
 router.post("/feature", productsController.changeFeature);
-router.post(
-  "/upload",
-  upload.fields([
-    { name: "thumbnail", maxCount: 1 },
-    { name: "images", maxCount: 10 },
-  ]),
-  productsController.upload
-);
 
 module.exports = router;

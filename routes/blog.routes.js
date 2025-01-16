@@ -5,7 +5,7 @@ const upload = require("../middlewares/uploadCloudinary.middleware");
 const authenticateJWT = require("../middlewares/jwt.middleware");
 
 router.get("/", blogsController.index);
-router.get("/:id", blogsController.detail);
+router.get("/:slug", blogsController.detail);
 router.post(
   "/",
   authenticateJWT,

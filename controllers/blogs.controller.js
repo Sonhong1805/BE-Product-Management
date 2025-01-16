@@ -18,6 +18,14 @@ class BlogsController {
       delete queryObj.title;
     }
 
+    if (queryObj?.topic?.trim()) {
+      queryObj["topic.value"] = {
+        $regex: `^${queryObj.topic}$`,
+        $options: "i",
+      };
+      delete queryObj.topic;
+    }
+
     let queryString = JSON.stringify(queryObj);
     queryString = queryString.replace(
       /\b(gte|gt|lte|lt)\b/g,
@@ -66,8 +74,8 @@ class BlogsController {
   });
 
   detail = asyncHandler(async (req, res) => {
-    const { id } = req.params;
-    const data = await blogModel.findOne({ _id: id });
+    const { slug } = req.params;
+    const data = await blogModel.findOne({ slug, deleted: false });
     if (data) {
       res.status(200).json({
         success: true,
@@ -79,9 +87,12 @@ class BlogsController {
 
   create = asyncHandler(async (req, res) => {
     const thumbnail = req?.file?.path;
-    const { title, content } = req.body;
+    const { title, topic, content } = req.body;
+    const validTopic = topic ? JSON.parse(topic) : null;
+
     const data = await blogModel.create({
       title,
+      topic: validTopic,
       thumbnail,
       author: req.user.fullname,
       content,
@@ -97,11 +108,18 @@ class BlogsController {
 
   update = asyncHandler(async (req, res) => {
     const { id } = req.params;
-    const { title, content } = req.body;
+    const { title, topic, content } = req.body;
     const thumbnail = req?.file?.path || req.body.thumbnail;
+    const validTopic = topic ? JSON.parse(topic) : null;
     const response = await blogModel.findByIdAndUpdate(
       { _id: id },
-      { title, thumbnail, author: req.user.fullname, content },
+      {
+        title,
+        topic: validTopic,
+        thumbnail,
+        author: req.user.fullname,
+        content,
+      },
       { new: true }
     );
     if (response) {
@@ -147,7 +165,7 @@ class BlogsController {
 
     if (response) {
       res.status(200).json({
-        success: !!response,
+        success: true,
         message: "Áp dụng thành công",
         data: response,
       });
